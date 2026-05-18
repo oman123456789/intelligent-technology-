@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0a0e1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PowerGuard">
+<title>PowerGuard Pro</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:        #0a0e1a;
+  --bg2:       #111827;
+  --bg3:       #1a2236;
+  --border:    rgba(99,179,237,0.12);
+  --border2:   rgba(99,179,237,0.25);
+  --blue:      #38bdf8;
+  --blue2:     #0ea5e9;
+  --green:     #4ade80;
+  --amber:     #fbbf24;
+  --red:       #f87171;
+  --text:      #e2e8f0;
+  --text2:     #94a3b8;
+  --text3:     #475569;
+  --mono:      'Space Mono', monospace;
+  --sans:      'Tajawal', sans-serif;
+  --radius:    12px;
+  --radius-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  overflow: hidden;
+}
+
+/* ── GRID LAYOUT ── */
+#app {
+  display: grid;
+  grid-template-rows: 56px 1fr 64px;
+  height: 100dvh;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* ── HEADER ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  position: relative;
+  z-index: 10;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.logo-icon {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--blue2), #6366f1);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+}
+.logo-icon svg { width: 16px; height: 16px; fill: #fff; }
+.logo-text {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+.logo-text span { color: var(--blue); }
+
+.conn-pill {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  background: var(--bg2);
+  cursor: pointer;
+  transition: all .2s;
+  font-size: 12px;
+  color: var(--text2);
+  user-select: none;
+}
+.conn-pill:active { transform: scale(.97); }
+.conn-pill.connected { border-color: rgba(74,222,128,.3); color: var(--green); }
+.conn-pill.connected .cdot { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.conn-pill.error { border-color: rgba(248,113,113,.3); color: var(--red); }
+.cdot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--text3);
+  transition: all .3s;
+  flex-shrink: 0;
+}
+
+/* ── MAIN SCROLL ── */
+main {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 12px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg3) transparent;
+}
+
+/* ── STATUS BAR ── */
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+.status-left { display: flex; align-items: center; gap: 8px; color: var(--text2); }
+.status-badge {
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-family: var(--mono);
+  font-weight: 700;
+}
+.badge-ok  { background: rgba(74,222,128,.15); color: var(--green); }
+.badge-warn{ background: rgba(251,191,36,.15); color: var(--amber); }
+.badge-err { background: rgba(248,113,113,.15); color: var(--red); }
+.badge-off { background: rgba(148,163,184,.1);  color: var(--text3); }
+
+/* ── METRIC CARDS ── */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+@media(min-width:600px){ .cards-grid { grid-template-columns: repeat(6,1fr); } }
+
+.mcard {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 8px;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
+}
+.mcard::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--card-color, var(--blue));
+  transform: scaleX(0);
+  transition: transform .3s;
+}
+.mcard.active { border-color: var(--card-color, var(--blue)); background: var(--bg3); }
+.mcard.active::before { transform: scaleX(1); }
+.mcard:active { transform: scale(.97); }
+
+.mcard-label { font-size: 10px; color: var(--text3); margin-bottom: 4px; }
+.mcard-val {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--card-color, var(--blue));
+  line-height: 1;
+}
+.mcard-unit { font-size: 9px; color: var(--text3); margin-top: 2px; }
+
+/* ── VIEW PANEL ── */
+.view-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 10px;
+  min-height: 220px;
+}
+
+/* ── GAUGE ── */
+.gauge-container { display: flex; flex-direction: column; align-items: center; }
+.gauge-info { text-align: center; margin-top: 8px; }
+.gauge-bigval {
+  font-family: var(--mono);
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1;
+}
+.gauge-subtitle { font-size: 12px; color: var(--text2); margin-top: 4px; }
+.gauge-range {
+  display: flex; justify-content: space-between;
+  width: 200px; font-size: 10px; color: var(--text3);
+  margin-top: 4px;
+}
+.gauge-limits {
+  display: flex; gap: 16px; margin-top: 10px;
+  font-size: 11px;
+}
+.glimit { display: flex; align-items: center; gap: 4px; color: var(--text2); }
+.glimit-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+/* ── CHART ── */
+.chart-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.chart-title { font-size: 13px; color: var(--text2); }
+.chart-pts { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+.chart-wrap { position: relative; height: 180px; }
+
+/* ── CIRCLES ── */
+.circles-grid {
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 10px;
+}
+@media(min-width:500px){ .circles-grid { grid-template-columns: repeat(4,1fr); } }
+.circ-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.circ-label { font-size: 11px; color: var(--text2); }
+
+/* ── NUMERIC ── */
+.num-grid {
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 8px;
+}
+@media(min-width:500px){ .num-grid { grid-template-columns: repeat(3,1fr); } }
+.num-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  text-align: center;
+}
+.num-val {
+  font-family: var(--mono);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+.num-unit { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.num-label { font-size: 10px; color: var(--text3); margin-top: 6px; }
+
+/* ── LED ── */
+.led-list { display: flex; flex-direction: column; gap: 6px; }
+.led-row {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.led-name { font-size: 13px; color: var(--text2); }
+.led-val {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.led-bar {
+  width: 60px; height: 4px;
+  background: var(--bg3);
+  border-radius: 2px;
+  margin-right: 8px;
+  overflow: hidden;
+}
+.led-bar-fill { height: 100%; border-radius: 2px; transition: width .4s; }
+
+/* ── ALERTS ── */
+.alerts-section { margin-bottom: 10px; }
+.alert-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  margin-bottom: 6px;
+  animation: slideIn .3s ease;
+}
+@keyframes slideIn { from { opacity:0; transform: translateY(-6px); } to { opacity:1; transform:none; } }
+.alert-warn { background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.2); color: var(--amber); }
+.alert-err  { background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.2); color: var(--red); }
+.alert-ok   { background: rgba(74,222,128,.08);  border: 1px solid rgba(74,222,128,.2);  color: var(--green); }
+.alert-icon { font-size: 14px; flex-shrink: 0; }
+
+/* ── BOTTOM NAV ── */
+nav {
+  display: flex;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+.nav-btn {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border: none; background: none;
+  color: var(--text3);
+  font-family: var(--sans);
+  font-size: 10px;
+  cursor: pointer;
+  transition: color .2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-btn.active { color: var(--blue); }
+.nav-btn svg { width: 20px; height: 20px; transition: transform .2s; }
+.nav-btn.active svg { transform: scale(1.1); }
+
+/* ── SIM TOGGLE ── */
+.sim-bar {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 6px 12px;
+  background: rgba(56,189,248,.05);
+  border: 1px solid rgba(56,189,248,.1);
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+  font-size: 12px; color: var(--text2);
+}
+.toggle-switch {
+  position: relative; width: 40px; height: 22px;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; inset: 0;
+  background: var(--bg3); border-radius: 11px;
+  cursor: pointer; transition: .3s;
+}
+.toggle-slider::before {
+  content: ''; position: absolute;
+  width: 16px; height: 16px; border-radius: 50%;
+  left: 3px; top: 3px;
+  background: var(--text3); transition: .3s;
+}
+.toggle-switch input:checked + .toggle-slider { background: rgba(56,189,248,.3); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); background: var(--blue); }
+
+/* ── SETTINGS PAGE ── */
+.settings-page { display: flex; flex-direction: column; gap: 10px; }
+.settings-section {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.settings-title {
+  font-size: 11px; color: var(--text3);
+  padding: 8px 12px 4px;
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.settings-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.settings-row:first-of-type { border-top: none; }
+.settings-label { color: var(--text); }
+.settings-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.settings-val {
+  font-family: var(--mono); font-size: 13px; color: var(--blue);
+  display: flex; align-items: center; gap: 8px;
+}
+.step-btn {
+  width: 26px; height: 26px; border-radius: 6px;
+  border: 1px solid var(--border2); background: var(--bg3);
+  color: var(--text); font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.step-btn:active { transform: scale(.9); background: var(--bg); }
+.about-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+  text-align: center;
+}
+.about-card .logo-big {
+  font-family: var(--mono); font-size: 20px; font-weight: 700;
+  color: var(--blue); margin-bottom: 4px;
+}
+.about-card p { font-size: 12px; color: var(--text3); line-height: 1.6; }
+.bt-service-input {
+  background: var(--bg); border: 1px solid var(--border2);
+  border-radius: 6px; padding: 4px 8px;
+  color: var(--text); font-family: var(--mono); font-size: 11px;
+  width: 180px;
+}
+
+/* ── HISTORY PAGE ── */
+.history-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.history-title { font-size: 14px; color: var(--text); font-weight: 500; }
+.clear-btn {
+  font-size: 11px; padding: 4px 10px;
+  border: 1px solid var(--border2); border-radius: 6px;
+  background: none; color: var(--red); cursor: pointer;
+}
+.history-chart-wrap { position: relative; height: 160px; margin-bottom: 10px; }
+.history-stats {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 6px;
+}
+.hstat {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 8px; text-align: center;
+}
+.hstat-val { font-family: var(--mono); font-size: 14px; font-weight: 700; }
+.hstat-label { font-size: 10px; color: var(--text3); margin-top: 2px; }
+.param-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.ptab {
+  font-size: 11px; padding: 4px 10px; border-radius: 20px;
+  border: 1px solid var(--border); background: none;
+  color: var(--text2); cursor: pointer; transition: all .2s;
+  font-family: var(--sans);
+}
+.ptab.active { background: var(--blue); color: #000; border-color: var(--blue); font-weight: 700; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9z"/></svg>
+      </div>
+      <span class="logo-text">Power<span>Guard</span> Pro</span>
+    </div>
+    <div class="conn-pill" id="connPill" onclick="connectBT()">
+      <div class="cdot" id="cdot"></div>
+      <span id="connLabel">اتصال BT</span>
+    </div>
+  </header>
+
+  <main id="mainArea"></main>
+
+  <nav>
+    <button class="nav-btn active" id="nb-dash" onclick="gotoPage('dash')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      لوحة
+    </button>
+    <button class="nav-btn" id="nb-history" onclick="gotoPage('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      السجل
+    </button>
+    <button class="nav-btn" id="nb-settings" onclick="gotoPage('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      الإعدادات
+    </button>
+  </nav>
+</div>
+
+<script>
+'use strict';
+
+/* ══ STATE ══ */
+const MAX_HIST = 120;
+const live = { V:0, A:0, W:0, F:0, PF:0, E:0 };
+const history = { V:[], A:[], W:[], F:[], PF:[], E:[] };
+let curPage = 'dash';
+let curView = 'gauge';
+let curParam = 'V';
+let histParam = 'V';
+let simOn = false, simTimer = null;
+let btDevice = null, btChar = null, btBuf = '';
+let lineChart = null, histChart = null;
+let alerts = [];
+let cfg = { vMax:250, vMin:180, aMax:16, wMax:3500 };
+
+const params = {
+  V:  { label:'الجهد',     unit:'V',   min:0,  max:280, warn:'vMax', danger:262, low:'vMin', dec:1, color:'#38bdf8' },
+  A:  { label:'التيار',    unit:'A',   min:0,  max:20,  warn:'aMax', danger:null,low:null,   dec:2, color:'#818cf8' },
+  W:  { label:'الطاقة',    unit:'W',   min:0,  max:4000,warn:'wMax', danger:null,low:null,   dec:0, color:'#34d399' },
+  F:  { label:'التردد',    unit:'Hz',  min:45, max:65,  warn:52,     danger:null,low:48,     dec:1, color:'#fb923c' },
+  PF: { label:'PF',        unit:'',    min:0,  max:1,   warn:null,   danger:null,low:0.7,    dec:2, color:'#a78bfa' },
+  E:  { label:'الاستهلاك', unit:'kWh', min:0,  max:100, warn:null,   danger:null,low:null,   dec:3, color:'#f472b6' },
+};
+
+function getWarn(p) {
+  const w = params[p].warn;
+  return typeof w === 'string' ? cfg[w] : w;
+}
+function getLow(p) {
+  const l = params[p].low;
+  return typeof l === 'string' ? cfg[l] : l;
+}
+function getColor(p, v) {
+  const d = params[p];
+  if (d.danger && v > d.danger) return '#f87171';
+  const w = getWarn(p);
+  if (w && v > w) return '#fbbf24';
+  const lo = getLow(p);
+  if (lo && v < lo && v > 0) return '#fbbf24';
+  return d.color;
+}
+function fmt(p, v) {
+  return v.toFixed(params[p].dec);
+}
+
+/* ══ BLUETOOTH ══ */
+async function connectBT() {
+  if (btDevice && btDevice.gatt.connected) {
+    btDevice.gatt.disconnect(); btDevice=null; btChar=null;
+    setConn('off'); return;
+  }
+  try {
+    setConn('connecting');
+    btDevice = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: ['0000ffe0-0000-1000-8000-00805f9b34fb']
+    });
+    btDevice.addEventListener('gattserverdisconnected', () => { setConn('off'); });
+    const server = await btDevice.gatt.connect();
+    const svc = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
+    btChar = await svc.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+    await btChar.startNotifications();
+    btChar.addEventListener('characteristicvaluechanged', onBTData);
+    setConn('on');
+  } catch(e) {
+    setConn('err');
+    setTimeout(() => setConn('off'), 3000);
+  }
+}
+
+function setConn(state) {
+  const pill = document.getElementById('connPill');
+  const dot  = document.getElementById('cdot');
+  const lbl  = document.getElementById('connLabel');
+  pill.className = 'conn-pill';
+  if (state === 'on')          { pill.classList.add('connected'); dot.style.background='#4ade80'; lbl.textContent='متصل'; }
+  else if (state === 'connecting'){ dot.style.background='#fbbf24'; lbl.textContent='جارٍ الاتصال...'; }
+  else if (state === 'err')    { pill.classList.add('error'); dot.style.background='#f87171'; lbl.textContent='خطأ'; }
+  else { dot.style.background='#475569'; lbl.textContent='اتصال BT'; }
+}
+
+function onBTData(e) {
+  btBuf += new TextDecoder().decode(e.target.value);
+  const lines = btBuf.split('\n'); btBuf = lines.pop();
+  lines.forEach(l => { try { const d = JSON.parse(l.trim()); if(d.V!==undefined) ingestData(d); } catch(_){} });
+}
+
+/* ══ DATA ══ */
+function ingestData(d) {
+  ['V','A','W','F','PF','E'].forEach(k => {
+    if (d[k] !== undefined) {
+      live[k] = d[k];
+      history[k].push({ v: d[k], t: Date.now() });
+      if (history[k].length > MAX_HIST) history[k].shift();
+    }
+  });
+  checkAlerts();
+  if (curPage === 'dash')     renderDash();
+  if (curPage === 'history')  renderHistory();
+}
+
+function checkAlerts() {
+  alerts = [];
+  const V = live.V, A = live.A, W = live.W;
+  if (V > cfg.vMax)      alerts.push({ type:'err',  msg:`جهد مرتفع: ${V.toFixed(1)}V (الحد: ${cfg.vMax}V)` });
+  if (V < cfg.vMin && V > 10) alerts.push({ type:'err', msg:`جهد منخفض: ${V.toFixed(1)}V (الحد: ${cfg.vMin}V)` });
+  if (A > cfg.aMax)      alerts.push({ type:'err',  msg:`تيار زائد: ${A.toFixed(2)}A (الحد: ${cfg.aMax}A)` });
+  if (W > cfg.wMax)      alerts.push({ type:'err',  msg:`طاقة زائدة: ${Math.round(W)}W (الحد: ${cfg.wMax}W)` });
+  if (V > cfg.vMax*0.95 && V <= cfg.vMax) alerts.push({ type:'warn', msg:`تحذير: الجهد قريب من الحد العلوي` });
+  if (A > cfg.aMax*0.9  && A <= cfg.aMax) alerts.push({ type:'warn', msg:`تحذير: التيار قريب من الحد` });
+  if (alerts.length === 0 && live.V > 10)  alerts.push({ type:'ok',   msg:'كل القيم طبيعية ✓' });
+}
+
+/* ══ SIMULATION ══ */
+function toggleSim(val) {
+  simOn = val;
+  document.getElementById('simLbl').textContent = val ? 'تشغيل' : 'إيقاف';
+  if (val) {
+    simTimer = setInterval(() => {
+      const t = Date.now()/1000;
+      ingestData({
+        V: 220 + 10*Math.sin(t*.3) + 2*(Math.random()-.5),
+        A: 4 + 3*Math.abs(Math.sin(t*.25)) + .3*(Math.random()-.5),
+        W: 880 + 700*Math.abs(Math.sin(t*.25)) + 30*(Math.random()-.5),
+        F: 50 + .3*Math.sin(t*.08),
+        PF: +((.82 + .12*Math.abs(Math.sin(t*.2))).toFixed(2)),
+        E: +(live.E + 0.0002).toFixed(4)
+      });
+    }, 1000);
+  } else {
+    clearInterval(simTimer);
+  }
+}
+
+/* ══ PAGES ══ */
+function gotoPage(page) {
+  curPage = page;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('nb-'+page).classList.add('active');
+  if (lineChart) { lineChart.destroy(); lineChart = null; }
+  if (histChart) { histChart.destroy(); histChart = null; }
+  renderPage();
+}
+
+function renderPage() {
+  if (curPage === 'dash')     renderDash();
+  else if (curPage === 'history') renderHistory();
+  else if (curPage === 'settings') renderSettings();
+}
+
+/* ══ DASH PAGE ══ */
+function renderDash() {
+  const area = document.getElementById('mainArea');
+
+  const statusText = live.V < 5 ? 'غير متصل' : alerts.some(a=>a.type==='err') ? 'خطأ' : alerts.some(a=>a.type==='warn') ? 'تحذير' : 'طبيعي';
+  const statusClass = live.V < 5 ? 'badge-off' : alerts.some(a=>a.type==='err') ? 'badge-err' : alerts.some(a=>a.type==='warn') ? 'badge-warn' : 'badge-ok';
+
+  area.innerHTML = `
+  <div class="status-bar">
+    <div class="status-left">
+      <span class="status-badge ${statusClass}">${statusText}</span>
+      <span style="color:var(--text3);font-size:11px">آخر تحديث: ${live.V>0?'الآن':'—'}</span>
+    </div>
+    <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">${new Date().toLocaleTimeString('ar')}</span>
+  </div>
+
+  <div class="cards-grid">
+    ${Object.keys(params).map(k => `
+      <div class="mcard ${k===curParam?'active':''}" style="--card-color:${params[k].color}" onclick="selParam('${k}')">
+        <div class="mcard-label">${params[k].label}</div>
+        <div class="mcard-val" style="color:${getColor(k,live[k])}">${fmt(k,live[k])}</div>
+        <div class="mcard-unit">${params[k].unit}</div>
+      </div>`).join('')}
+  </div>
+
+  <div style="display:flex;gap:6px;margin-bottom:8px;overflow-x:auto;padding-bottom:2px">
+    ${[['gauge','عداد'],['chart','رسم'],['circle','دوائر'],['numeric','أرقام'],['led','LED']].map(([v,l])=>`
+      <button onclick="setView('${v}')" style="flex-shrink:0;font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid ${curView===v?params[curParam].color:'rgba(99,179,237,0.2)'};background:${curView===v?params[curParam].color+'22':'none'};color:${curView===v?params[curParam].color:'var(--text2)'};cursor:pointer;font-family:var(--sans);transition:all .2s">${l}</button>
+    `).join('')}
+  </div>
+
+  <div class="view-panel" id="viewPanel"></div>
+
+  ${alerts.length ? `<div class="alerts-section">${alerts.slice(0,2).map(a=>`
+    <div class="alert-item alert-${a.type}">
+      <span class="alert-icon">${a.type==='err'?'⚠':'a.type==='ok'?'✓':'!'}</span>
+      <span>${a.msg}</span>
+    </div>`).join('')}</div>` : ''}
+
+  <div class="sim-bar">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+    <span>محاكاة بيانات</span>
+    <label class="toggle-switch">
+      <input type="checkbox" id="simCb" ${simOn?'checked':''} onchange="toggleSim(this.checked)">
+      <span class="toggle-slider"></span>
+    </label>
+    <span id="simLbl" style="font-size:11px;color:var(--text3)">${simOn?'تشغيل':'إيقاف'}</span>
+  </div>`;
+
+  renderView();
+}
+
+function selParam(p) {
+  curParam = p;
+  if (lineChart) { lineChart.destroy(); lineChart = null; }
+  renderDash();
+}
+
+function setView(v) {
+  curView = v;
+  if (lineChart) { lineChart.destroy(); lineChart = null; }
+  renderDash();
+}
+
+function renderView() {
+  const panel = document.getElementById('viewPanel');
+  if (!panel) return;
+  if      (curView==='gauge')   renderGauge(panel);
+  else if (curView==='chart')   renderChartView(panel);
+  else if (curView==='circle')  renderCircles(panel);
+  else if (curView==='numeric') renderNumeric(panel);
+  else if (curView==='led')     renderLED(panel);
+}
+
+function renderGauge(el) {
+  const p = params[curParam], v = live[curParam];
+  const pct = Math.min(Math.max((v - p.min) / (p.max - p.min), 0), 1);
+  const col = getColor(curParam, v);
+  const R=80, cx=120, cy=110, sw=14;
+  const sA = -210*Math.PI/180, eA = 30*Math.PI/180;
+  const a = sA + (eA-sA)*pct;
+  function arc(a1,a2,r) {
+    const x1=cx+r*Math.cos(a1),y1=cy+r*Math.sin(a1);
+    const x2=cx+r*Math.cos(a2),y2=cy+r*Math.sin(a2);
+    return `M${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r},0,${a2-a1>Math.PI?1:0},1,${x2.toFixed(1)},${y2.toFixed(1)}`;
+  }
+  const warnPct = getWarn(curParam) ? Math.min((getWarn(curParam)-p.min)/(p.max-p.min),1) : null;
+  const warnA = warnPct ? sA + (eA-sA)*warnPct : null;
+
+  el.innerHTML = `
+  <div class="gauge-container">
+    <svg width="240" height="130" viewBox="0 0 240 130">
+      <path d="${arc(sA,eA,R)}" stroke="#1e293b" stroke-width="${sw}" fill="none" stroke-linecap="round"/>
+      ${warnA ? `<path d="${arc(sA,warnA,R)}" stroke="${col}" stroke-width="${sw}" fill="none" stroke-linecap="round" opacity=".4"/>` : ''}
+      <path d="${arc(sA,a,R)}" stroke="${col}" stroke-width="${sw}" fill="none" stroke-linecap="round"/>
+      <circle cx="${(cx+R*Math.cos(a)).toFixed(1)}" cy="${(cy+R*Math.sin(a)).toFixed(1)}" r="5" fill="${col}" opacity=".9"/>
+      <text x="${cx}" y="${cy-10}" text-anchor="middle" font-family="Space Mono,monospace" font-size="30" font-weight="700" fill="${col}">${fmt(curParam,v)}</text>
+      <text x="${cx}" y="${cy+10}" text-anchor="middle" font-family="Tajawal,sans-serif" font-size="13" fill="#64748b">${p.unit} — ${p.label}</text>
+      <text x="30" y="125" font-size="10" fill="#334155" font-family="Space Mono,monospace">${p.min}</text>
+      <text x="${240-30}" y="125" text-anchor="end" font-size="10" fill="#334155" font-family="Space Mono,monospace">${p.max}</text>
+    </svg>
+    <div class="gauge-limits">
+      ${getWarn(curParam)?`<div class="glimit"><div class="glimit-dot" style="background:#fbbf24"></div>حد التحذير: ${getWarn(curParam)} ${p.unit}</div>`:''}
+      ${p.danger?`<div class="glimit"><div class="glimit-dot" style="background:#f87171"></div>حد الخطر: ${p.danger} ${p.unit}</div>`:''}
+    </div>
+  </div>`;
+}
+
+function renderChartView(el) {
+  const p = params[curParam];
+  const hist = history[curParam];
+  const data = hist.map(h=>h.v);
+  const labels = hist.map((_,i)=>'');
+  el.innerHTML = `
+  <div class="chart-header">
+    <span class="chart-title">${p.label} — آخر ${data.length} قراءة</span>
+    <span class="chart-pts" style="color:${p.color}">${fmt(curParam,live[curParam])} ${p.unit}</span>
+  </div>
+  <div class="chart-wrap"><canvas id="lc"></canvas></div>`;
+  if (lineChart) lineChart.destroy();
+  lineChart = new Chart(document.getElementById('lc'), {
+    type: 'line',
+    data: { labels, datasets: [{ data, borderColor: p.color, backgroundColor: p.color+'18', fill: true, tension:.4, pointRadius:0, borderWidth:2 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales: { y:{ticks:{color:'#475569',font:{size:10,family:'Space Mono'}},grid:{color:'rgba(255,255,255,.04)'}},
+                x:{display:false} } }
+  });
+}
+
+function renderCircles(el) {
+  const items = Object.keys(params).slice(0,4).map(k => {
+    const p=params[k], v=live[k];
+    const pct=Math.min(Math.max((v-p.min)/(p.max-p.min),0),1);
+    const col=getColor(k,v);
+    const r=40, circ=2*Math.PI*r;
+    return `<div class="circ-item">
+      <svg width="96" height="96" viewBox="0 0 96 96">
+        <circle cx="48" cy="48" r="${r}" stroke="#1e293b" stroke-width="8" fill="none"/>
+        <circle cx="48" cy="48" r="${r}" stroke="${col}" stroke-width="8" fill="none"
+          stroke-dasharray="${(circ*pct).toFixed(1)} ${circ.toFixed(1)}"
+          stroke-dashoffset="${circ/4}" stroke-linecap="round"/>
+        <text x="48" y="45" text-anchor="middle" font-family="Space Mono,monospace" font-size="14" font-weight="700" fill="${col}">${fmt(k,v)}</text>
+        <text x="48" y="60" text-anchor="middle" font-family="Tajawal,sans-serif" font-size="10" fill="#64748b">${p.unit}</text>
+      </svg>
+      <span class="circ-label">${p.label}</span>
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div class="circles-grid">${items}</div>`;
+}
+
+function renderNumeric(el) {
+  const cards = Object.keys(params).map(k => {
+    const p=params[k],v=live[k],col=getColor(k,v);
+    return `<div class="num-card">
+      <div class="num-val" style="color:${col}">${fmt(k,v)}</div>
+      <div class="num-unit">${p.unit}</div>
+      <div class="num-label">${p.label}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div class="num-grid">${cards}</div>`;
+}
+
+function renderLED(el) {
+  const rows = Object.keys(params).map(k => {
+    const p=params[k],v=live[k],col=getColor(k,v);
+    const pct=Math.min(Math.max((v-p.min)/(p.max-p.min),0),1)*100;
+    return `<div class="led-row">
+      <span class="led-name">${p.label}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="led-bar"><div class="led-bar-fill" style="width:${pct.toFixed(0)}%;background:${col}"></div></div>
+        <span class="led-val" style="color:${col}">${fmt(k,v)}<span style="font-size:11px;color:var(--text3);margin-right:4px">${p.unit}</span></span>
+      </div>
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div class="led-list">${rows}</div>`;
+}
+
+/* ══ HISTORY PAGE ══ */
+function renderHistory() {
+  const area = document.getElementById('mainArea');
+  const p = params[histParam];
+  const hist = history[histParam];
+  const vals = hist.map(h=>h.v);
+  const mn = vals.length ? Math.min(...vals) : 0;
+  const mx = vals.length ? Math.max(...vals) : 0;
+  const avg = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+
+  area.innerHTML = `
+  <div class="history-header">
+    <span class="history-title">سجل القراءات</span>
+    <button class="clear-btn" onclick="clearHistory()">مسح</button>
+  </div>
+  <div class="param-tabs">
+    ${Object.keys(params).map(k=>`
+      <button class="ptab ${k===histParam?'active':''}" onclick="setHistParam('${k}')">${params[k].label}</button>
+    `).join('')}
+  </div>
+  <div class="view-panel" style="margin-bottom:8px">
+    <div class="chart-header">
+      <span class="chart-title">${p.label}</span>
+      <span style="font-size:11px;color:${p.color};font-family:var(--mono)">${vals.length} نقطة</span>
+    </div>
+    <div class="history-chart-wrap"><canvas id="hc"></canvas></div>
+  </div>
+  <div class="history-stats">
+    <div class="hstat"><div class="hstat-val" style="color:var(--green)">${mn.toFixed(p.dec)}</div><div class="hstat-label">أدنى ${p.unit}</div></div>
+    <div class="hstat"><div class="hstat-val" style="color:${p.color}">${avg.toFixed(p.dec)}</div><div class="hstat-label">متوسط ${p.unit}</div></div>
+    <div class="hstat"><div class="hstat-val" style="color:var(--red)">${mx.toFixed(p.dec)}</div><div class="hstat-label">أعلى ${p.unit}</div></div>
+  </div>`;
+
+  if (histChart) histChart.destroy();
+  if (vals.length) {
+    histChart = new Chart(document.getElementById('hc'), {
+      type: 'line',
+      data: { labels: vals.map((_,i)=>i+1+''), datasets:[{
+        data: vals, borderColor: p.color, backgroundColor: p.color+'12',
+        fill: true, tension:.35, pointRadius: vals.length<30?3:0, borderWidth:1.5
+      }]},
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          y:{ticks:{color:'#475569',font:{size:10,family:'Space Mono'}},grid:{color:'rgba(255,255,255,.04)'}},
+          x:{display:false}
+        }
+      }
+    });
+  }
+}
+
+function setHistParam(p) {
+  histParam = p;
+  if (histChart) { histChart.destroy(); histChart = null; }
+  renderHistory();
+}
+
+function clearHistory() {
+  Object.keys(history).forEach(k => history[k] = []);
+  renderHistory();
+}
+
+/* ══ SETTINGS PAGE ══ */
+function renderSettings() {
+  document.getElementById('mainArea').innerHTML = `
+  <div class="settings-page">
+    <div class="about-card">
+      <div class="logo-big">⚡ PowerGuard Pro</div>
+      <p>لوحة مراقبة كهربائية متكاملة<br>تعمل مع Arduino + PZEM-004T + HC-05/06</p>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-title">حدود الحماية</div>
+      ${[
+        ['vMax','أقصى جهد','V',1,280,150],
+        ['vMin','أدنى جهد','V',1,200,80],
+        ['aMax','أقصى تيار','A',0.5,100,0.5],
+        ['wMax','أقصى طاقة','W',50,22000,50],
+      ].map(([k,lbl,unit,step,max,min])=>`
+        <div class="settings-row">
+          <div><div class="settings-label">${lbl}</div></div>
+          <div class="settings-val">
+            <button class="step-btn" onclick="adjCfg('${k}',${-step},${min},${max})">−</button>
+            <span id="cv_${k}">${cfg[k]}</span> ${unit}
+            <button class="step-btn" onclick="adjCfg('${k}',${step},${min},${max})">+</button>
+          </div>
+        </div>`).join('')}
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-title">الاتصال</div>
+      <div class="settings-row">
+        <div><div class="settings-label">خدمة البلوتوث</div><div class="settings-sub">UUID افتراضي للـ HC-05/06</div></div>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">FFE0</span>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">صيغة البيانات</div>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--blue)">JSON / UART</span>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-title">كيفية التوصيل</div>
+      <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:6px">
+        <div style="font-size:12px;color:var(--text2);line-height:1.8">
+          ١. أضف HC-05 أو HC-06 للـ Arduino على Serial أو SoftwareSerial<br>
+          ٢. أرسل البيانات بصيغة JSON كل ثانية:<br>
+          <code style="font-family:var(--mono);font-size:10px;color:var(--blue);background:var(--bg);padding:4px 8px;border-radius:4px;display:inline-block;margin-top:4px">{"V":220.1,"A":5.2,"W":1144,"F":50.0,"PF":0.92,"E":0.045}</code><br>
+          ٣. افتح التطبيق واضغط "اتصال BT"<br>
+          ٤. اختر جهازك من القائمة
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function adjCfg(k, step, min, max) {
+  cfg[k] = Math.min(max, Math.max(min, cfg[k] + step));
+  const el = document.getElementById('cv_'+k);
+  if (el) el.textContent = cfg[k];
+}
+
+/* ══ INIT ══ */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+gotoPage('dash');
+
+setInterval(() => {
+  if (curPage==='dash') {
+    const el = document.querySelector('.status-bar span:last-child');
+    if (el) el.textContent = new Date().toLocaleTimeString('ar');
+  }
+}, 1000);
+</script>
+</body>
+</html>
