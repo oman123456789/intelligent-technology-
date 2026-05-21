@@ -512,28 +512,63 @@ function fmt(p, v) {
 }
 
 /* ══ BLUETOOTH ══ */
+// UUID ثابتة للـ HM-10
+const HM10_SERVICE    = '0000ffe0-0000-1000-8000-00805f9b34fb';
+const HM10_CHAR       = '0000ffe1-0000-1000-8000-00805f9b34fb';
+
 async function connectBT() {
   if (btDevice && btDevice.gatt.connected) {
     btDevice.gatt.disconnect(); btDevice=null; btChar=null;
     setConn('off'); return;
   }
+
+  // تحقق من دعم المتصفح
+  if (!navigator.bluetooth) {
+    alert('متصفحك لا يدعم Web Bluetooth.\nاستخدم Chrome على Android أو الكمبيوتر.\nعلى iPhone استخدم تطبيق Bluefy.');
+    return;
+  }
+
   try {
     setConn('connecting');
+
+    // HM-10: نحدد الـ service مباشرة في filters
     btDevice = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: ['0000ffe0-0000-1000-8000-00805f9b34fb']
+      filters: [
+        { services: [HM10_SERVICE] },      // يظهر أجهزة HM-10 فقط
+        { namePrefix: 'HM' },              // أو أي جهاز اسمه يبدأ بـ HM
+        { namePrefix: 'MLT-BT05' },        // بعض HM-10 clones
+      ],
+      optionalServices: [HM10_SERVICE]
     });
-    btDevice.addEventListener('gattserverdisconnected', () => { setConn('off'); });
+
+    btDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
     const server = await btDevice.gatt.connect();
-    const svc = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
-    btChar = await svc.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+    const svc    = await server.getPrimaryService(HM10_SERVICE);
+    btChar       = await svc.getCharacteristic(HM10_CHAR);
     await btChar.startNotifications();
     btChar.addEventListener('characteristicvaluechanged', onBTData);
     setConn('on');
+
   } catch(e) {
-    setConn('err');
-    setTimeout(() => setConn('off'), 3000);
+    console.error('BT Error:', e);
+    if (e.name === 'NotFoundError') {
+      // المستخدم أغلق نافذة الاختيار
+      setConn('off');
+    } else {
+      setConn('err');
+      setTimeout(() => setConn('off'), 3000);
+    }
   }
+}
+
+function onDisconnected() {
+  setConn('off');
+  btDevice = null; btChar = null;
+  // إعادة الاتصال تلقائياً بعد 3 ثوانٍ
+  setTimeout(() => {
+    if (!btDevice) connectBT();
+  }, 3000);
 }
 
 function setConn(state) {
@@ -548,9 +583,20 @@ function setConn(state) {
 }
 
 function onBTData(e) {
+  // HM-10 يرسل البيانات بأجزاء — نجمعها حتى نجد سطراً مكتملاً
   btBuf += new TextDecoder().decode(e.target.value);
-  const lines = btBuf.split('\n'); btBuf = lines.pop();
-  lines.forEach(l => { try { const d = JSON.parse(l.trim()); if(d.V!==undefined) ingestData(d); } catch(_){} });
+  let nl;
+  while ((nl = btBuf.indexOf('\n')) !== -1) {
+    const line = btBuf.slice(0, nl).trim();
+    btBuf = btBuf.slice(nl + 1);
+    if (!line) continue;
+    try {
+      const d = JSON.parse(line);
+      if (d.V !== undefined) ingestData(d);
+    } catch(_) {}
+  }
+  // امسح البفر إذا تراكم أكثر من 200 حرف بدون \n
+  if (btBuf.length > 200) btBuf = '';
 }
 
 /* ══ DATA ══ */
